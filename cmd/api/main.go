@@ -1,15 +1,41 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+	"time"
 
-func main() {
+	"github.com/gin-gonic/gin"
+)
 
+func setupRouter() *gin.Engine {
 	router := gin.Default()
+
+	return router
+}
+
+func getPingPong(router *gin.Engine) *gin.Engine {
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
 	})
 
-	router.Run() // listens on 0.0.0.0:8080 by default
+	return router
+}
+
+func main() {
+
+	router := setupRouter()
+	router = getPingPong(router)
+
+	server := &http.Server{
+		Addr:           ":8080",
+		Handler:        router,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	server.ListenAndServe()
+
 }
