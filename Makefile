@@ -7,4 +7,11 @@ diff: # Atlas migration: to check the migration difference with DB
 apply: # Atlas migration: to apply the migration difference with DB
 	atlas schema apply --env gorm
 
+
+
+
+
+
+
+
 .PHONY: inspect diff apply
