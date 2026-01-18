@@ -1,0 +1,19 @@
+info:
+  contact: {}
+paths:
+  /ping:
+    get:
+      consumes:
+      - application/json
+      description: 'Ping me: and expect a response with Pong'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Use me to check if the service is healthy
+      tags:
+      - HealthCheck for the service
+swagger: "2.0"
