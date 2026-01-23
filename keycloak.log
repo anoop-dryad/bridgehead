@@ -1,0 +1,8 @@
+Running the server in development mode. DO NOT use this configuration in production.
+2026-01-23 14:56:48,571 INFO  [org.hibernate.orm.jdbc.batch] (JPA Startup Thread) HHH100501: Automatic JDBC statement batching enabled (maximum batch size 32)
+2026-01-23 14:56:48,889 INFO  [org.infinispan.CONTAINER] (main) Virtual threads support enabled
+2026-01-23 14:56:48,962 INFO  [org.infinispan.CONTAINER] (main) ISPN000556: Starting user marshaller 'org.infinispan.commons.marshall.ImmutableProtoStreamMarshaller'
+2026-01-23 14:56:49,134 INFO  [org.keycloak.connections.infinispan.DefaultInfinispanConnectionProviderFactory] (main) Node name: node_167965, Site name: null
+2026-01-23 14:56:49,728 INFO  [io.quarkus] (main) Keycloak 26.5.1 on JVM (powered by Quarkus 3.27.1) started in 3.440s. Listening on: http://127.0.0.1:8080
+2026-01-23 14:56:49,728 INFO  [io.quarkus] (main) Profile dev activated. 
+2026-01-23 14:56:49,728 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, hibernate-validator, jdbc-h2, keycloak, narayana-jta, opentelemetry, reactive-routes, rest, rest-jackson, smallrye-context-propagation, smallrye-openapi, swagger-ui, vertx]

@@ -21,3 +21,6 @@ type GatewayRequest struct {
 	UUID        uuid.UUID `gorm:"type:uuid;not null;uniqueIndex;column:uuid" json:"uuid"`
 	RequestData string    `gorm:"column:request_data" json:"request_data"`
 }
+
+type User struct {
+}

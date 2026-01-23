@@ -1,3 +1,5 @@
+KEYCLOAK_BIN=/Users/anpks/path/to/keycloak/bin/kc.sh
+
 inspect: # Atlas migration: to insoect the schema
 	atlas schema inspect --env gorm
 
@@ -16,8 +18,11 @@ server:
 swagger:
 	swag init -g ./cmd/api/main.go -o cmd/api/docs
 
+keycloak-bg: # Start keycloak in dev mode
+#make sure we have updated ~/.zshrc with /path/to/keycloak/bin
+	nohup kc.sh start-dev --http-host=127.0.0.1 > keycloak.log 2>&1 &
 
 
 
 
-.PHONY: inspect diff apply test server swagger
+.PHONY: inspect diff apply test server swagger keycloak-bg
