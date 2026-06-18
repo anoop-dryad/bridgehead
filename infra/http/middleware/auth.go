@@ -1,4 +1,4 @@
-package auth
+package middleware
 
 import (
 	"context"
@@ -6,18 +6,18 @@ import (
 	"strings"
 
 	"github.com/Nerzal/gocloak/v13"
-	"github.com/anoop-dryad/bridgehead/internal/service"
+	in_memory_cache "github.com/anoop-dryad/bridgehead/infra/cache"
 )
 
 type AuthMiddleware struct {
 	client       *gocloak.GoCloak
-	cache        *service.CacheService
+	cache        *in_memory_cache.CacheService
 	clientID     string
 	clientSecret string
 	realm        string
 }
 
-func NewAuthMiddleware(client *gocloak.GoCloak, clientID, clientSecret, realm string, cache *service.CacheService) *AuthMiddleware {
+func NewAuthMiddleware(client *gocloak.GoCloak, clientID, clientSecret, realm string, cache *in_memory_cache.CacheService) *AuthMiddleware {
 	return &AuthMiddleware{
 		client:       client,
 		cache:        cache,

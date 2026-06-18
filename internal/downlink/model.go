@@ -1,4 +1,4 @@
-package models
+package downlink
 
 import (
 	"time"

@@ -1,4 +1,4 @@
-package handlers
+package downlink
 
 import (
 	"net/http"
