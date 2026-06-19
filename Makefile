@@ -23,6 +23,12 @@ keycloak-bg: # Start keycloak in dev mode
 	nohup kc.sh start-dev --http-host=127.0.0.1 > keycloak.log 2>&1 &
 
 
+# ----------------------------------------------------------------------------------------- #
 
+migrate:
+	go run cmd/migrate/main.go
 
-.PHONY: inspect diff apply test server swagger keycloak-bg
+run:
+	go run cmd/server/main.go
+
+.PHONY: inspect diff apply test server swagger keycloak-bg migrate run
