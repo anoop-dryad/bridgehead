@@ -6,7 +6,5 @@ import (
 )
 
 func Health(router *gin.RouterGroup) {
-	h := handlers.NewHealthHandler()
-
-	router.GET("ping/", h.HealthCheck)
+	router.GET("ping/", handlers.HealthCheck)
 }

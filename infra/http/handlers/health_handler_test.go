@@ -1,4 +1,4 @@
-package downlink
+package handlers
 
 import (
 	"net/http"
@@ -12,8 +12,7 @@ import (
 func TestPingRoute(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	handler := NewHealthHandler()
-	router.GET("/api/v1/ping/", handler.HealthCheck)
+	router.GET("/api/v1/ping/", HealthCheck)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/ping/", nil)
 	w := httptest.NewRecorder()

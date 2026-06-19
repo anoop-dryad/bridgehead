@@ -6,13 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type HealthHandler struct {
-}
-
-func NewHealthHandler() HealthHandler {
-	return HealthHandler{}
-}
-
 // @BasePath /api/v1
 
 // PingExample godoc
@@ -24,7 +17,7 @@ func NewHealthHandler() HealthHandler {
 // @Produce json
 // @Success 200 {string} Pong
 // @Router /ping [get]
-func (hh HealthHandler) HealthCheck(ctx *gin.Context) {
+func HealthCheck(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "pong",
 	})
