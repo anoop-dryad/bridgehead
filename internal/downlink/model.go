@@ -1,26 +1,53 @@
 package downlink
 
-import (
-	"time"
+import "time"
 
-	"github.com/google/uuid"
+type Status string
+type Type string
+type DeviceType string
+
+const (
+	StatusPending    Status = "pending"
+	StatusQueued     Status = "queued"
+	StatusDispatched Status = "dispatched"
+	StatusDelivered  Status = "delivered"
+	StatusFailed     Status = "failed"
+	StatusExpired    Status = "expired"
 )
 
-type SensorRequest struct {
-	ID          int64     `gorm:"primaryKey;autoIncrement:true" json:"id"`
-	CreatedAt   time.Time `gorm:"autoCreateTime:milli;column:created_at" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime:milli;column:updated_at" json:"updated_at"`
-	UUID        uuid.UUID `gorm:"type:uuid;not null;uniqueIndex;column:uuid" json:"uuid"`
-	RequestData string    `gorm:"column:request_data" json:"request_data"`
+const (
+	TypeConfig   Type = "config"
+	TypeCommand  Type = "command"
+	TypeFirmware Type = "firmware"
+	TypeAck      Type = "ack"
+)
+
+const (
+	DeviceTypeGateway DeviceType = "gateway"
+	DeviceTypeSensor  DeviceType = "sensor"
+)
+
+const DefaultTTL = 24 * time.Hour
+const MaxRetries = 5
+
+type DownlinkRequest struct {
+	ID         string
+	DeviceEUI  string
+	DeviceType DeviceType
+	Payload    []byte
+	Type       Type
+	Status     Status
+	RetryCount int
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ExpiresAt  time.Time
 }
 
-type GatewayRequest struct {
-	ID          int64     `gorm:"primaryKey;autoIncrement:true" json:"id"`
-	CreatedAt   time.Time `gorm:"autoCreateTime:milli;column:created_at" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime:milli;column:updated_at" json:"updated_at"`
-	UUID        uuid.UUID `gorm:"type:uuid;not null;uniqueIndex;column:uuid" json:"uuid"`
-	RequestData string    `gorm:"column:request_data" json:"request_data"`
-}
-
-type User struct {
+type CreateRequest struct {
+	ID         *string // optional — caller may provide
+	DeviceEUI  string
+	DeviceType DeviceType
+	Payload    []byte
+	Type       Type
+	ExpiresAt  *time.Time // optional — defaults to now + 24h
 }
