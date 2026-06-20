@@ -5,12 +5,19 @@ import (
 )
 
 type Config struct {
+	App     App
 	HTTP    HTTP
 	DB      DB
 	Redis   Redis
 	MQTT    MQTT
 	Kinesis Kinesis
 	SQS     SQS
+}
+
+type App struct {
+	IsProduction bool
+	Name         string
+	Version      string
 }
 
 type HTTP struct {
@@ -47,6 +54,11 @@ type SQS struct {
 
 func Load() Config {
 	return Config{
+		App: App{
+			IsProduction: getEnv("ENV", "development") == "production",
+			Name:         getEnv("APP_NAME", "bridgehead"),
+			Version:      getEnv("APP_VERSION", "dev"),
+		},
 		HTTP: HTTP{
 			Addr:         getEnv("HTTP_ADDR", ":8080"),
 			IsProduction: getEnv("ENV", "development") == "production",
@@ -62,7 +74,7 @@ func Load() Config {
 		},
 		MQTT: MQTT{
 			BrokerURL: mustEnv("MQTT_BROKER_URL"),
-			ClientID:  getEnv("MQTT_CLIENT_ID", "downlink-service"),
+			ClientID:  getEnv("MQTT_CLIENT_ID", "bridgehead"),
 			Topic:     mustEnv("MQTT_TOPIC"),
 		},
 		Kinesis: Kinesis{
