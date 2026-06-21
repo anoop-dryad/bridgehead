@@ -6,8 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// @BasePath /api/v1
-
 // PingExample godoc
 // @Summary Use me to check if the service is healthy
 // @Schemes

@@ -21,8 +21,7 @@ type App struct {
 }
 
 type HTTP struct {
-	Addr         string
-	IsProduction bool
+	Addr string
 }
 
 type DB struct {
@@ -60,8 +59,7 @@ func Load() Config {
 			Version:      getEnv("APP_VERSION", "dev"),
 		},
 		HTTP: HTTP{
-			Addr:         getEnv("HTTP_ADDR", ":8080"),
-			IsProduction: getEnv("ENV", "development") == "production",
+			Addr: getEnv("HTTP_ADDR", ":8080"),
 		},
 		DB: DB{
 			DSN:          mustEnv("DB_DSN"),

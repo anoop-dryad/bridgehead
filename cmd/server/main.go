@@ -10,6 +10,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// @title           Bridgehead API
+// @version         1.0
+// @description     Downlink service for border gateways and sensors
+// @host            localhost:8080
 func main() {
 	cfg := config.Load()
 
@@ -32,7 +36,7 @@ func main() {
 		DownlinkHandler: handlers.NewDownlinkHandler(downlinkService),
 	}
 
-	srv := server.NewServer(cfg.HTTP, deps, log)
+	srv := server.NewServer(cfg.App, deps, log)
 	log.Info("starting server", zap.String("addr", cfg.HTTP.Addr))
 
 	if err := srv.ListenAndServe(); err != nil {
