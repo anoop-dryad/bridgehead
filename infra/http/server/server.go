@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewServer(cfg config.HTTP, deps handlers.Dependencies, log *zap.Logger) *http.Server {
+func NewServer(cfg config.App, deps handlers.Dependencies, log *zap.Logger) *http.Server {
 	engine := gin.New()
 	engine.Use(middleware.Logger(log))
 	engine.Use(gin.Recovery())

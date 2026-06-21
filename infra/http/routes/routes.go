@@ -7,14 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Register(engine *gin.Engine, deps handlers.Dependencies, cfg config.HTTP) {
+func Register(engine *gin.Engine, deps handlers.Dependencies, cfg config.App) {
 	v1 := engine.Group("/v1")
 	// v1.Use(middleware.Auth())
 
 	Health(v1)
 	Downlink(v1, deps.DownlinkHandler)
 
+	// future
+	// v2 := engine.Group("/v2")
+	// Downlink(v2, deps.DownlinkV2Handler)
+
 	if !cfg.IsProduction {
-		swagger.Register(engine.Group("/"))
+		swagger.Register(engine, "v1")
+		// swagger.Register(engine, "v2")  // when v2 exists
 	}
 }

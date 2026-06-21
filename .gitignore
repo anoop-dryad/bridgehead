@@ -32,3 +32,8 @@ go.work.sum
 
 .DS_Store
 **/.DS_Store
+
+.envrc
+
+# swagger generated — never commit, always regenerate
+infra/http/swagger/docs/

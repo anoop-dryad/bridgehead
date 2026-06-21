@@ -1,0 +1,17 @@
+# .envrc.example — copy to .envrc and fill in values
+
+export ENV=development
+export APP_NAME=bridgehead
+export APP_VERSION=dev
+export HTTP_ADDR=:8080
+export DB_DSN=postgres://user:pass@localhost:5432/bridgehead?sslmode=disable
+export REDIS_ADDR=localhost:6379
+export REDIS_PASSWORD=
+export MQTT_BROKER_URL=tcp://localhost:1883
+export MQTT_CLIENT_ID=bridgehead
+export MQTT_TOPIC=gateways/#
+export AWS_REGION=eu-central-1
+export AWS_ACCESS_KEY_ID=
+export AWS_SECRET_ACCESS_KEY=
+export KINESIS_STREAM_NAME=sensor-uplinks
+export SQS_QUEUE_URL=http://localhost:4566/000000000000/topology-updates
