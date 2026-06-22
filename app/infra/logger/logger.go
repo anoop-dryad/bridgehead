@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"github.com/anoop-dryad/bridgehead/config"
+	"github.com/anoop-dryad/bridgehead/app/config"
 
 	"go.uber.org/zap"
 )

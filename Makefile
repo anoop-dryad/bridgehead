@@ -23,12 +23,18 @@
 # ----------------------------------------------------------------------------------------- #
 
 migrate:
-	go run cmd/migrate/main.go
+	cd app && go run cmd/migrate/main.go
 
 swagger:
-	swag init -g cmd/server/main.go -o infra/http/swagger/docs
+	cd app && swag init -g cmd/server/main.go -o infra/http/swagger/docs
 
 run: swagger
-	go run cmd/server/main.go
+	cd app && go run cmd/server/main.go
+
+lint:
+	cd app && golangci-lint run ./...
+
+test:
+	cd app && go test ./...
 
 .PHONY: migrate swagger run

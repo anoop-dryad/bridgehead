@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anoop-dryad/bridgehead/config"
-	"github.com/anoop-dryad/bridgehead/infra/http/handlers"
-	"github.com/anoop-dryad/bridgehead/infra/http/middleware"
-	"github.com/anoop-dryad/bridgehead/infra/http/routes"
+	"github.com/anoop-dryad/bridgehead/app/config"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/handlers"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/middleware"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/routes"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )

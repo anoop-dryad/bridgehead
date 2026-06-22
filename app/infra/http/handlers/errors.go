@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/anoop-dryad/bridgehead/internal/downlink"
+	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 )
 
 func mapError(err error) int {

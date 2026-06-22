@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/anoop-dryad/bridgehead/config"
-	"github.com/anoop-dryad/bridgehead/infra/db"
-	"github.com/anoop-dryad/bridgehead/infra/http/handlers"
-	"github.com/anoop-dryad/bridgehead/infra/http/server"
-	"github.com/anoop-dryad/bridgehead/infra/logger"
-	"github.com/anoop-dryad/bridgehead/internal/downlink"
+	"github.com/anoop-dryad/bridgehead/app/config"
+	"github.com/anoop-dryad/bridgehead/app/infra/db"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/handlers"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/server"
+	"github.com/anoop-dryad/bridgehead/app/infra/logger"
+	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 	"go.uber.org/zap"
 )
 

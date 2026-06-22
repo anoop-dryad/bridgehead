@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/anoop-dryad/bridgehead/infra/http/dto"
-	"github.com/anoop-dryad/bridgehead/internal/downlink"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/dto"
+	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 	"github.com/gin-gonic/gin"
 )
 

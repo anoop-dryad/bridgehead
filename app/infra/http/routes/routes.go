@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"github.com/anoop-dryad/bridgehead/config"
-	"github.com/anoop-dryad/bridgehead/infra/http/handlers"
-	"github.com/anoop-dryad/bridgehead/infra/http/swagger"
+	"github.com/anoop-dryad/bridgehead/app/config"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/handlers"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/swagger"
 	"github.com/gin-gonic/gin"
 )
 

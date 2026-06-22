@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/anoop-dryad/bridgehead/infra/http/handlers"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/handlers"
 	"github.com/gin-gonic/gin"
 )
 
