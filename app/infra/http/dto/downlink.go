@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/anoop-dryad/bridgehead/internal/downlink"
+	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 )
 
 type CreateDownlinkRequest struct {

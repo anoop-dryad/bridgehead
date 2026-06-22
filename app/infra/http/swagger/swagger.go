@@ -1,7 +1,7 @@
 package swagger
 
 import (
-	"github.com/anoop-dryad/bridgehead/infra/http/swagger/docs"
+	"github.com/anoop-dryad/bridgehead/app/infra/http/swagger/docs"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"

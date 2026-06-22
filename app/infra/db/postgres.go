@@ -3,7 +3,7 @@ package db
 // https://dev.to/jones_charles_ad50858dbc0/sqlx-your-go-to-database-toolkit-for-go-developers-53n8
 
 import (
-	"github.com/anoop-dryad/bridgehead/config"
+	"github.com/anoop-dryad/bridgehead/app/config"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
