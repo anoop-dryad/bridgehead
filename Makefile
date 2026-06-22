@@ -22,8 +22,14 @@
 
 # ----------------------------------------------------------------------------------------- #
 
-migrate:
-	cd app && go run cmd/migrate/main.go
+clean:
+	cd app && go clean -modcache
+
+tidy:
+	cd app && go mod tidy
+
+deps:
+	cd app && go mod download
 
 swagger:
 	cd app && swag init -g cmd/server/main.go -o infra/http/swagger/docs
@@ -37,4 +43,7 @@ lint:
 test:
 	cd app && go test ./...
 
-.PHONY: migrate swagger run
+migrate:
+	cd app && go run cmd/migrate/main.go
+
+.PHONY: clean tidy deps migrate swagger run lint test
