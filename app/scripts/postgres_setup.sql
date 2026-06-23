@@ -48,6 +48,7 @@ REVOKE ALL ON DATABASE :db_name FROM PUBLIC;
 
 -- User need to connect
 GRANT CONNECT ON DATABASE :db_name TO :app_user;
+GRANT CREATE ON DATABASE :db_name TO :app_user;
 
 -- =============================================================================
 -- SECTION 4: PUBLIC SCHEMA PRIVILEGES

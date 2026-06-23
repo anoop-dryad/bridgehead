@@ -1,7 +1,7 @@
 # ── Stage 1: Build ──────────────────────────────────────────
 # Use Go image to compile — this image is heavy (~600MB)
 # but never ships to production
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 

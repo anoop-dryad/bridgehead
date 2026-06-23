@@ -26,6 +26,8 @@ go.work.sum
 
 # env file
 .env
+.envrc
+.env.local
 
 # Editor/IDE
 .vscode/
@@ -33,7 +35,7 @@ go.work.sum
 .DS_Store
 **/.DS_Store
 
-.envrc
+
 
 # swagger generated — never commit, always regenerate
 infra/http/swagger/docs/

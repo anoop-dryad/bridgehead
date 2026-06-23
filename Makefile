@@ -1,27 +1,3 @@
-# KEYCLOAK_BIN=/Users/anpks/path/to/keycloak/bin/kc.sh
-
-# inspect: # Atlas migration: to insoect the schema
-# 	atlas schema inspect --env gorm
-
-# diff: # Atlas migration: to check the migration difference with DB
-# 	atlas migrate diff --env gorm
-
-# apply: # Atlas migration: to apply the migration difference with DB
-# 	atlas schema apply --env gorm
-
-# test:  # All tests written will be checked recursively
-# 	go test -v -cover ./...
-
-# server:
-# 	go run ./cmd/api/main.go
-
-# keycloak-bg: # Start keycloak in dev mode
-# #make sure we have updated ~/.zshrc with /path/to/keycloak/bin
-# 	nohup kc.sh start-dev --http-host=127.0.0.1 > keycloak.log 2>&1 &
-
-
-# ----------------------------------------------------------------------------------------- #
-
 clean:
 	cd app && go clean -modcache
 
@@ -43,7 +19,23 @@ lint:
 test:
 	cd app && go test ./...
 
+vuln:
+	cd app && govulncheck ./...
+
 migrate:
 	cd app && go run cmd/migrate/main.go
 
-.PHONY: clean tidy deps migrate swagger run lint test
+# ── Docker ───────────────────────────────────────────
+docker-build: # builds server image
+	docker build -f app/Dockerfile -t bridgehead:local app/
+
+docker-migrate: # builds migration image
+	docker build -f app/Dockerfile.migrate -t bridgehead-migrate:local app/
+
+docker-run: # runs migrations in container
+	docker run --env-file .env -p 8080:8080 bridgehead:local
+
+docker-migrate-run: # runs server in container
+	docker run --env-file .env bridgehead-migrate:local
+
+.PHONY: clean tidy deps migrate swagger run lint test vuln docker-build docker-migrate docker-run docker-migrate-run
