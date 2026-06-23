@@ -8,9 +8,6 @@ updates:
       day: monday
       time: "09:00"
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - go
 
   # Terraform — one entry per environment directory
   - package-ecosystem: terraform
@@ -19,31 +16,19 @@ updates:
       interval: weekly
       day: monday
       time: "09:00"
-    labels:
-      - dependencies
-      - terraform
 
   - package-ecosystem: terraform
     directory: /terraform/environments/staging
     schedule:
       interval: weekly
-    labels:
-      - dependencies
-      - terraform
 
   - package-ecosystem: terraform
     directory: /terraform/environments/prod
     schedule:
       interval: weekly
-    labels:
-      - dependencies
-      - terraform
 
   # GitHub Actions
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    labels:
-      - dependencies
-      - github-actions
