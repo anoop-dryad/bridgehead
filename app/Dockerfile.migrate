@@ -1,0 +1,31 @@
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build -o bin/migrate cmd/migrate/main.go
+
+# ── Stage 2: Run ────────────────────────────────────────────
+FROM alpine:3.19
+
+WORKDIR /app
+
+# copy migration binary
+COPY --from=builder /app/bin/migrate .
+
+# copy SQL files — migrate binary reads these at runtime
+# server doesn't need these — another reason for two images
+COPY migrations/ ./migrations/
+
+# Atlas CLI needed to apply the SQL files
+RUN wget -q https://release.ariga.io/atlas/atlas-linux-amd64-latest \
+    -O /usr/local/bin/atlas && \
+    chmod +x /usr/local/bin/atlas
+
+# runs once, applies pending SQL, exits
+CMD ["./migrate"]
