@@ -1,12 +1,19 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/anoop-dryad/bridgehead/app/config"
 	"github.com/anoop-dryad/bridgehead/app/infra/db"
 	"github.com/anoop-dryad/bridgehead/app/infra/http/handlers"
 	"github.com/anoop-dryad/bridgehead/app/infra/http/server"
+	"github.com/anoop-dryad/bridgehead/app/infra/kinesis"
 	"github.com/anoop-dryad/bridgehead/app/infra/logger"
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
+	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
 	"go.uber.org/zap"
 )
 
@@ -23,13 +30,27 @@ func main() {
 	}
 	defer log.Sync() // flush buffer before exit
 
-	db := db.NewPostgresPool(cfg.DB)
+	// context cancelled on OS signal — drives graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	dbPool := db.NewPostgresPool(cfg.DB)
 
 	// repos
-	downlinkRepo := downlink.NewRepository(db)
+	downlinkRepo := downlink.NewRepository(dbPool)
+	sensorRepo := sensor.NewRepository(dbPool)
 
 	// services
 	downlinkService := downlink.NewService(downlinkRepo, log) // logging only supported in service layer
+	sensorSvc := sensor.NewService(sensorRepo, log)
+
+	kinesisConsumer, err := kinesis.NewConsumer(cfg.Kinesis, sensorSvc, log)
+	if err != nil {
+		log.Fatal("failed to init kinesis consumer", zap.Error(err))
+	}
+
+	// start as background goroutine
+	go kinesisConsumer.Start(ctx)
 
 	// handlers
 	deps := handlers.Dependencies{
@@ -39,7 +60,10 @@ func main() {
 	srv := server.NewServer(cfg.App, deps, log)
 	log.Info("starting server", zap.String("addr", cfg.HTTP.Addr))
 
-	if err := srv.ListenAndServe(); err != nil {
+	if err := srv.Start(ctx); err != nil {
 		log.Fatal("server failed", zap.Error(err))
 	}
+
+	log.Info("server stopped gracefully")
+
 }
