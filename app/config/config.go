@@ -44,6 +44,7 @@ type MQTT struct {
 type Kinesis struct {
 	StreamName string
 	Region     string
+	DSN        string
 }
 
 type SQS struct {

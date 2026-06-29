@@ -4,130 +4,50 @@ package kinesis
 import (
 	"context"
 	"encoding/json"
-	"time"
+	"strings"
 
 	appconfig "github.com/anoop-dryad/bridgehead/app/config"
 	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	consumer "github.com/harlow/kinesis-consumer"
+	store "github.com/harlow/kinesis-consumer/store/postgres"
 	"go.uber.org/zap"
 )
 
 type Consumer struct {
-	client        *kinesis.Client
-	streamName    string
+	consumer      *consumer.Consumer // one stream per consumer
 	sensorService *sensor.Service
 	log           *zap.Logger
 }
 
 func NewConsumer(cfg appconfig.Kinesis, svc *sensor.Service, log *zap.Logger) (*Consumer, error) {
-	awsCfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion(cfg.Region),
+	ck, err := store.New("bridgehead", "kinesis_consumer", cfg.DSN)
+	if err != nil {
+		return nil, err
+	}
+
+	active_consumer, err := consumer.New(
+		cfg.StreamName,
+		consumer.WithStore(ck),
+		consumer.WithLogger(&zapAdapter{log: log}),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Consumer{
-		client:        kinesis.NewFromConfig(awsCfg),
-		streamName:    cfg.StreamName,
+		consumer:      active_consumer,
 		sensorService: svc,
 		log:           log.With(zap.String("infra", "kinesis")),
 	}, nil
 }
 
-func (c *Consumer) Start(ctx context.Context) {
-	c.log.Info("starting kinesis consumer",
-		zap.String("stream", c.streamName),
-	)
+func (c *Consumer) Start(ctx context.Context) error {
+	c.log.Info("starting kinesis consumer")
 
-	for {
-		if err := c.consume(ctx); err != nil {
-			c.log.Error("kinesis consumer error, retrying in 5s",
-				zap.Error(err),
-			)
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(5 * time.Second):
-				continue
-			}
-		}
-		if ctx.Err() != nil {
-			return
-		}
-	}
-}
-
-func (c *Consumer) consume(ctx context.Context) error {
-	// get shards
-	streams, err := c.client.DescribeStream(ctx, &kinesis.DescribeStreamInput{
-		StreamName: aws.String(c.streamName),
+	return c.consumer.Scan(ctx, func(r *consumer.Record) error {
+		c.handleRecord(ctx, r.Data)
+		return nil // continue scanning
 	})
-	if err != nil {
-		return err
-	}
-
-	for _, shard := range streams.StreamDescription.Shards {
-		go c.consumeShard(ctx, aws.ToString(shard.ShardId))
-	}
-
-	<-ctx.Done()
-	return nil
-}
-
-func (c *Consumer) consumeShard(ctx context.Context, shardID string) {
-	// get shard iterator — LATEST means only new records
-	iter, err := c.client.GetShardIterator(ctx, &kinesis.GetShardIteratorInput{
-		StreamName:        aws.String(c.streamName),
-		ShardId:           aws.String(shardID),
-		ShardIteratorType: "LATEST",
-	})
-	if err != nil {
-		c.log.Error("failed to get shard iterator",
-			zap.String("shard", shardID),
-			zap.Error(err),
-		)
-		return
-	}
-
-	nextIterator := iter.ShardIterator
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		out, err := c.client.GetRecords(ctx, &kinesis.GetRecordsInput{
-			ShardIterator: nextIterator,
-			Limit:         aws.Int32(100),
-		})
-		if err != nil {
-			c.log.Error("failed to get records",
-				zap.String("shard", shardID),
-				zap.Error(err),
-			)
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		for _, record := range out.Records {
-			c.handleRecord(ctx, record.Data)
-		}
-
-		nextIterator = out.NextShardIterator
-		if nextIterator == nil {
-			return // shard ended
-		}
-
-		// avoid hot loop when no records
-		if len(out.Records) == 0 {
-			time.Sleep(1 * time.Second)
-		}
-	}
 }
 
 func (c *Consumer) handleRecord(ctx context.Context, data []byte) {
@@ -137,7 +57,6 @@ func (c *Consumer) handleRecord(ctx context.Context, data []byte) {
 		return
 	}
 
-	// pick best gateway — highest RSSI
 	best := bestGateway(uplink.UplinkMessage.RxMetadata)
 	if best == nil {
 		c.log.Error("no gateway metadata in uplink",
@@ -146,17 +65,24 @@ func (c *Consumer) handleRecord(ctx context.Context, data []byte) {
 		return
 	}
 
-	// hand off to domain — infra job is done
-	err := c.sensorService.RecordUplink(ctx, sensor.UplinkEvent{
-		SensorEUI:  uplink.EndDeviceIDs.DevEUI,
-		DeviceID:   uplink.EndDeviceIDs.DeviceID,
+	if err := c.sensorService.RecordUplink(ctx, sensor.UplinkEvent{
+		SensorEUI:  strings.ToLower(uplink.EndDeviceIDs.DevEUI),
+		DeviceID:   strings.ToLower(uplink.EndDeviceIDs.DeviceID),
 		AppID:      uplink.EndDeviceIDs.AppIDs.ApplicationID,
-		GatewayEUI: best.GatewayIDs.EUI,
-	})
-	if err != nil {
+		GatewayEUI: strings.ToLower(best.GatewayIDs.EUI),
+	}); err != nil {
 		c.log.Error("failed to record uplink",
 			zap.String("dev_eui", uplink.EndDeviceIDs.DevEUI),
 			zap.Error(err),
 		)
 	}
+}
+
+// zapAdapter bridges harlow's Logger interface to zap
+type zapAdapter struct {
+	log *zap.Logger
+}
+
+func (z *zapAdapter) Log(args ...interface{}) {
+	z.log.Sugar().Info(args...)
 }
