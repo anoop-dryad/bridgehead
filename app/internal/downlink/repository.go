@@ -14,6 +14,14 @@ type Repository struct {
 	db *sqlx.DB
 }
 
+type RepositoryInterface interface {
+	Create(ctx context.Context, req CreateRequest) (*DownlinkRequest, error)
+	GetByID(ctx context.Context, id string) (*DownlinkRequest, error)
+	UpdateStatus(ctx context.Context, id string, status Status) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context, deviceEUI string) ([]*DownlinkRequest, error)
+}
+
 func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{
 		db: db,

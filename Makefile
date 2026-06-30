@@ -38,4 +38,15 @@ docker-run: # runs migrations in container
 docker-migrate-run: # runs server in container
 	docker run --env-file .env bridgehead-migrate:local
 
-.PHONY: clean tidy deps migrate swagger run lint test vuln docker-build docker-migrate docker-run docker-migrate-run
+# ---------- GoMock - Mockgen ----------------------------------
+
+mocks: ## regenerate all mocks
+	mockgen -source=./app/internal/sensor/repository.go \
+	        -destination=./app/internal/sensor/mocks/mock_repository.go \
+	        -package=mocks
+	mockgen -source=./app/internal/downlink/repository.go \
+	        -destination=./app/internal/downlink/mocks/mock_repository.go \
+	        -package=mocks
+
+
+.PHONY: clean tidy deps migrate swagger run lint test vuln docker-build docker-migrate docker-run docker-migrate-run mocks

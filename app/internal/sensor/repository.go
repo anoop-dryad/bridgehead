@@ -13,6 +13,15 @@ type Repository struct {
 	db *sqlx.DB
 }
 
+type RepositoryInterface interface {
+	UpsertSensor(ctx context.Context, s Sensor) error
+	UpsertMapping(ctx context.Context, m GatewayMapping) error
+	GetByEUI(ctx context.Context, eui string) (*Sensor, error)
+	GetMappingBySensorEUI(ctx context.Context, sensorEUI string) (*GatewayMapping, error)
+	GetSensorsByGatewayEUI(ctx context.Context, gatewayEUI string) ([]*Sensor, error)
+	WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
 func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
