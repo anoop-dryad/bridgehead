@@ -8,11 +8,11 @@ import (
 )
 
 type Service struct {
-	repo *Repository
+	repo RepositoryInterface
 	log  *zap.Logger
 }
 
-func NewService(repo *Repository, log *zap.Logger) *Service {
+func NewService(repo RepositoryInterface, log *zap.Logger) *Service {
 	return &Service{
 		repo: repo,
 		log:  log.With(zap.String("domain", "downlink")), // scoped logger
