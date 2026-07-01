@@ -1,0 +1,104 @@
+{
+    "correlation_ids": [
+      "gs:uplink:01JCB43N5GH81WGDCPFMJ3BSZC"
+    ],
+    "end_device_ids": {
+      "application_ids": {
+        "application_id": "8fcc36f0-6b93-427a-a762-2"
+      },
+      "dev_addr": "27010325",
+      "dev_eui": "641ABA00000005AA",
+      "device_id": "sn-silvav3n805-c8a7b3e67a2e411fbfaec"
+    },
+    "real_addr": 21908,
+    "real_rssi": -139,
+    "received_at": "2024-11-10T13:27:13.532915163Z",
+    "sensor_values": {
+      "air_pressure": 102488,
+      "battery": 90,
+      "dispatch": 16,
+      "dynamic_threshold": 8,
+      "dynamic_threshold_is_enabled": 1,
+      "fire_alert": 0,
+      "fire_ctrl_state": 0,
+      "fire_detect_system_state": 1,
+      "gas_resistance": 740900,
+      "gas_scan_id": 154,
+      "humidity": 94,
+      "iaq": 72,
+      "iaq_accuracy": 3,
+      "max_gasres_decrease_in_window": 0,
+      "output_run_in_status": 1,
+      "output_stabilization_status": 1,
+      "padding": 0,
+      "raw_humidity": 94,
+      "raw_temperature": 1,
+      "static_iaq": 100,
+      "static_iaq_accuracy": 3,
+      "temperature": 1,
+      "thp_corrected": 0,
+      "timestamp_us": 9269638
+    },
+    "site_id": 69,
+    "uplink_message": {
+      "consumed_airtime": "1.974272s",
+      "f_cnt": 16,
+      "f_port": 101,
+      "frm_payload": "EJrxooprxqsFCRlA4rQAfsO4RgChAJoAAQ==",
+      "locations": {
+        "user": {}
+      },
+      "network_ids": {
+        "cluster_address": "eu1.cloud.thethings.industries",
+        "cluster_id": "eu1",
+        "net_id": "000013",
+        "ns_id": "EC656E0000101941",
+        "tenant_address": "eywa-networks.eu1.cloud.thethings.industries",
+        "tenant_id": "eywa-networks"
+      },
+      "packet_error_rate": 0.0625,
+      "received_at": "2024-11-10T13:27:13.328765137Z",
+      "rx_metadata": [
+        {
+          "channel_rssi": -139,
+          "fine_timestamp": "1435828085",
+          "gateway_ids": {
+            "eui": "0016C001F158D594",
+            "gateway_id": "bg3-2401-6-0016c001f158d594"
+          },
+          "received_at": "2024-11-10T13:27:13.328141869Z",
+          "rssi": -139,
+          "snr": -18,
+          "time": "2024-11-10T13:27:12Z",
+          "timestamp": 3279114089,
+          "uplink_token": "CikKJwobYmczLTI0MDEtNi0wMDE2YzAwMWYxNThkNTk0EggAFsAB8VjVlBDpns2bDBoMCLHpwrkGEK2YvJwBIKjkuNO30wQ="
+        },
+        {
+          "channel_rssi": -78,
+          "fine_timestamp": "1963130802",
+          "gateway_ids": {
+            "eui": "0016C001F157F502",
+            "gateway_id": "bg-silvav2m1n88-9346e24e06184be48738"
+          },
+          "received_at": "2024-11-10T13:27:13.111430213Z",
+          "rssi": -78,
+          "snr": 13.2,
+          "time": "2024-11-10T13:27:13Z",
+          "timestamp": 2110313293,
+          "uplink_token": "CjIKMAokYmctc2lsdmF2Mm0xbjg4LTkzNDZlMjRlMDYxODRiZTQ4NzM4EggAFsAB8Vf1AhDNpqPuBxoMCLHpwrkGEJyx+J4BIMjJ5cO1krUB"
+        }
+      ],
+      "settings": {
+        "data_rate": {
+          "lora": {
+            "bandwidth": 125000,
+            "coding_rate": "4/5",
+            "spreading_factor": 12
+          }
+        },
+        "frequency": "868100000",
+        "time": "2024-11-10T13:27:12Z",
+        "timestamp": 3279114089
+      }
+    }
+  }

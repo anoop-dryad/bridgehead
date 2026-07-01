@@ -1,0 +1,10 @@
+{
+    "end_device_ids": {
+        "dev_eui": "641ABA00000005AA",
+        "device_id": "sn-silvav3n805",
+        "application_ids": { "application_id": "8fcc36f0-6b93" }
+    },
+    "uplink_message": {
+        "rx_metadata": []
+    }
+}
