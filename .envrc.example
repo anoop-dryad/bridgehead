@@ -15,3 +15,14 @@ export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 export KINESIS_STREAM_NAME=sensor-uplinks
 export SQS_QUEUE_URL=http://localhost:4566/000000000000/topology-updates
+
+
+# keep the whole TTN MQTT as the last config.
+
+export TTN_APP_IDS=appid1,appid2,appid3
+
+export TTN_APP_appid1_USERNAME=username1
+export TTN_APP_appid1_PASSWORD=verylongapikey1...
+
+export TTN_APP_appid2_USERNAME=username2
+export TTN_APP_appid2_PASSWORD=verylongapikey2...

@@ -4,6 +4,7 @@ go 1.25.5
 
 require (
 	ariga.io/atlas-go-sdk v0.7.2
+	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/harlow/kinesis-consumer v0.5.0
 	github.com/jmoiron/sqlx v1.4.0
@@ -85,6 +86,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect

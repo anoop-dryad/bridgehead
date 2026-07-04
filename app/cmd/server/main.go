@@ -13,6 +13,7 @@ import (
 	"github.com/anoop-dryad/bridgehead/app/infra/kinesis"
 	"github.com/anoop-dryad/bridgehead/app/infra/logger"
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
+	"github.com/anoop-dryad/bridgehead/app/internal/gateway"
 	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
 	"go.uber.org/zap"
 )
@@ -44,13 +45,20 @@ func main() {
 	downlinkService := downlink.NewService(downlinkRepo, log) // logging only supported in service layer
 	sensorSvc := sensor.NewService(sensorRepo, log)
 
+	// kinesis consumer
 	kinesisConsumer, err := kinesis.NewConsumer(cfg.Kinesis, sensorSvc, log)
 	if err != nil {
 		log.Fatal("failed to init kinesis consumer", zap.Error(err))
 	}
-
-	// start as background goroutine
 	go kinesisConsumer.Start(ctx)
+
+	// gateway mqtt consumer
+	gatewaySvc := gateway.NewService(gatewayRepo, redisCache, log)
+	gatewayConsumer, err := gatewaymqtt.NewConsumer(cfg.MQTT.Gateway, gatewaySvc, log)
+	if err != nil {
+		log.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
+	}
+	go gatewayConsumer.Start(ctx)
 
 	// handlers
 	deps := handlers.Dependencies{
