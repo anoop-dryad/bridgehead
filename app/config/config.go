@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -36,9 +38,24 @@ type Redis struct {
 }
 
 type MQTT struct {
+	Gateway GatewayMQTT
+	TTN     TTNMQTT
+}
+
+type GatewayMQTT struct {
 	BrokerURL string
 	ClientID  string
-	Topic     string
+}
+
+type TTNMQTT struct {
+	BrokerURL string
+	Apps      []TTNApp
+}
+
+type TTNApp struct {
+	AppID    string
+	Username string
+	Password string
 }
 
 type Kinesis struct {
@@ -72,9 +89,14 @@ func Load() Config {
 			Password: getEnv("REDIS_PASSWORD", ""),
 		},
 		MQTT: MQTT{
-			BrokerURL: mustEnv("MQTT_BROKER_URL"),
-			ClientID:  getEnv("MQTT_CLIENT_ID", "bridgehead"),
-			Topic:     mustEnv("MQTT_TOPIC"),
+			Gateway: GatewayMQTT{
+				BrokerURL: mustEnv("GATEWAY_MQTT_BROKER_URL"),
+				ClientID:  getEnv("GATEWAY_MQTT_CLIENT_ID", "bridgehead-gw"),
+			},
+			TTN: TTNMQTT{
+				BrokerURL: mustEnv("TTN_MQTT_BROKER_URL"),
+				Apps:      loadTTNApps(),
+			},
 		},
 		Kinesis: Kinesis{
 			StreamName: mustEnv("KINESIS_STREAM_NAME"),
@@ -102,4 +124,18 @@ func getEnv(key, fallback string) string {
 		return val
 	}
 	return fallback
+}
+
+func loadTTNApps() []TTNApp {
+	appIDs := strings.Split(mustEnv("TTN_APP_IDS"), ",")
+	var apps []TTNApp
+	for _, id := range appIDs {
+		id = strings.TrimSpace(id)
+		apps = append(apps, TTNApp{
+			AppID:    id,
+			Username: mustEnv(fmt.Sprintf("TTN_APP_%s_USERNAME", id)),
+			Password: mustEnv(fmt.Sprintf("TTN_APP_%s_PASSWORD", id)),
+		})
+	}
+	return apps
 }
