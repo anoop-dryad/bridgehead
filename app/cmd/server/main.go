@@ -12,6 +12,7 @@ import (
 	"github.com/anoop-dryad/bridgehead/app/infra/http/server"
 	"github.com/anoop-dryad/bridgehead/app/infra/kinesis"
 	"github.com/anoop-dryad/bridgehead/app/infra/logger"
+	gatewaymqtt "github.com/anoop-dryad/bridgehead/app/infra/mqtt/gateway"
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 	"github.com/anoop-dryad/bridgehead/app/internal/gateway"
 	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
@@ -40,10 +41,12 @@ func main() {
 	// repos
 	downlinkRepo := downlink.NewRepository(dbPool)
 	sensorRepo := sensor.NewRepository(dbPool)
+	gatewayRepo := gateway.NewRepository(dbPool)
 
 	// services
 	downlinkService := downlink.NewService(downlinkRepo, log) // logging only supported in service layer
 	sensorSvc := sensor.NewService(sensorRepo, log)
+	gatewaySvc := gateway.NewService(gatewayRepo, nil, log) // NOTE : add cache  when available
 
 	// kinesis consumer
 	kinesisConsumer, err := kinesis.NewConsumer(cfg.Kinesis, sensorSvc, log)
@@ -53,7 +56,6 @@ func main() {
 	go kinesisConsumer.Start(ctx)
 
 	// gateway mqtt consumer
-	gatewaySvc := gateway.NewService(gatewayRepo, redisCache, log)
 	gatewayConsumer, err := gatewaymqtt.NewConsumer(cfg.MQTT.Gateway, gatewaySvc, log)
 	if err != nil {
 		log.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
