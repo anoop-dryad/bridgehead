@@ -7,12 +7,14 @@ import (
 	"syscall"
 
 	"github.com/anoop-dryad/bridgehead/app/config"
+	"github.com/anoop-dryad/bridgehead/app/infra/cache"
 	"github.com/anoop-dryad/bridgehead/app/infra/db"
 	"github.com/anoop-dryad/bridgehead/app/infra/http/handlers"
 	"github.com/anoop-dryad/bridgehead/app/infra/http/server"
 	"github.com/anoop-dryad/bridgehead/app/infra/kinesis"
 	"github.com/anoop-dryad/bridgehead/app/infra/logger"
 	gatewaymqtt "github.com/anoop-dryad/bridgehead/app/infra/mqtt/gateway"
+	"github.com/anoop-dryad/bridgehead/app/infra/mqtt/ttn"
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 	"github.com/anoop-dryad/bridgehead/app/internal/gateway"
 	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
@@ -37,6 +39,11 @@ func main() {
 	defer cancel()
 
 	dbPool := db.NewPostgresPool(cfg.DB)
+	redisCache := cache.NewRedisCache(cfg.Redis)
+	if err := redisCache.Ping(ctx); err != nil {
+		log.Fatal("redis unreachable", zap.Error(err))
+	}
+	defer redisCache.Close()
 
 	// repos
 	downlinkRepo := downlink.NewRepository(dbPool)
@@ -46,7 +53,7 @@ func main() {
 	// services
 	downlinkService := downlink.NewService(downlinkRepo, log) // logging only supported in service layer
 	sensorSvc := sensor.NewService(sensorRepo, log)
-	gatewaySvc := gateway.NewService(gatewayRepo, nil, log) // NOTE : add cache  when available
+	gatewaySvc := gateway.NewService(gatewayRepo, redisCache, log)
 
 	// kinesis consumer
 	kinesisConsumer, err := kinesis.NewConsumer(cfg.Kinesis, sensorSvc, log)
@@ -61,6 +68,20 @@ func main() {
 		log.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
 	}
 	go gatewayConsumer.Start(ctx)
+
+	// gateway publisher
+	gatewayPub, err := gatewaymqtt.NewPublisher(cfg.MQTT.Gateway, log)
+	if err != nil {
+		log.Fatal("gateway publisher init failed", zap.Error(err))
+	}
+	defer gatewayPub.Disconnect()
+
+	// ttn publisher
+	ttnPub, err := ttn.NewPublisher(cfg.MQTT.TTN, log)
+	if err != nil {
+		log.Fatal("ttn publisher init failed", zap.Error(err))
+	}
+	defer ttnPub.Disconnect()
 
 	// handlers
 	deps := handlers.Dependencies{
