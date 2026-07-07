@@ -14,6 +14,7 @@ type Repository struct {
 }
 
 type RepositoryInterface interface {
+	DeleteSensorByEui(tx context.Context, sensorEUI string) error
 	UpsertSensor(ctx context.Context, s Sensor) error
 	UpsertMapping(ctx context.Context, m GatewayMapping) error
 	GetByEUI(ctx context.Context, eui string) (*Sensor, error)
@@ -80,6 +81,20 @@ func (r *Repository) GetByEUI(ctx context.Context, eui string) (*Sensor, error) 
 		return nil, err
 	}
 	return toSensorModel(row), nil
+}
+
+func (r *Repository) DeleteSensorByEui(ctx context.Context, eui string) error {
+	var row sensorRow
+	err := r.db.GetContext(ctx, &row, `
+		DELETE FROM sensors WHERE eui = $1
+	`, eui)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ── Gateway mapping ───────────────────────────────────────────

@@ -41,6 +41,20 @@ func (m *MockRepositoryInterface) EXPECT() *MockRepositoryInterfaceMockRecorder 
 	return m.recorder
 }
 
+// DeleteSensorByEui mocks base method.
+func (m *MockRepositoryInterface) DeleteSensorByEui(tx context.Context, sensorEUI string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSensorByEui", tx, sensorEUI)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSensorByEui indicates an expected call of DeleteSensorByEui.
+func (mr *MockRepositoryInterfaceMockRecorder) DeleteSensorByEui(tx, sensorEUI any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSensorByEui", reflect.TypeOf((*MockRepositoryInterface)(nil).DeleteSensorByEui), tx, sensorEUI)
+}
+
 // GetByEUI mocks base method.
 func (m *MockRepositoryInterface) GetByEUI(ctx context.Context, eui string) (*sensor.Sensor, error) {
 	m.ctrl.T.Helper()

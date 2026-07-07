@@ -15,6 +15,7 @@ import (
 	"github.com/anoop-dryad/bridgehead/app/infra/logger"
 	gatewaymqtt "github.com/anoop-dryad/bridgehead/app/infra/mqtt/gateway"
 	"github.com/anoop-dryad/bridgehead/app/infra/mqtt/ttn"
+	"github.com/anoop-dryad/bridgehead/app/infra/sqs"
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 	"github.com/anoop-dryad/bridgehead/app/internal/gateway"
 	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
@@ -55,20 +56,6 @@ func main() {
 	sensorSvc := sensor.NewService(sensorRepo, log)
 	gatewaySvc := gateway.NewService(gatewayRepo, redisCache, log)
 
-	// kinesis consumer
-	kinesisConsumer, err := kinesis.NewConsumer(cfg.Kinesis, sensorSvc, log)
-	if err != nil {
-		log.Fatal("failed to init kinesis consumer", zap.Error(err))
-	}
-	go kinesisConsumer.Start(ctx)
-
-	// gateway mqtt consumer
-	gatewayConsumer, err := gatewaymqtt.NewConsumer(cfg.MQTT.Gateway, gatewaySvc, log)
-	if err != nil {
-		log.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
-	}
-	go gatewayConsumer.Start(ctx)
-
 	// gateway publisher
 	gatewayPub, err := gatewaymqtt.NewPublisher(cfg.MQTT.Gateway, log)
 	if err != nil {
@@ -82,6 +69,27 @@ func main() {
 		log.Fatal("ttn publisher init failed", zap.Error(err))
 	}
 	defer ttnPub.Disconnect()
+
+	// gateway mqtt consumer
+	gatewayConsumer, err := gatewaymqtt.NewConsumer(cfg.MQTT.Gateway, gatewaySvc, log)
+	if err != nil {
+		log.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
+	}
+	go gatewayConsumer.Start(ctx)
+
+	// kinesis consumer
+	kinesisConsumer, err := kinesis.NewConsumer(cfg.Kinesis, sensorSvc, log)
+	if err != nil {
+		log.Fatal("failed to init kinesis consumer", zap.Error(err))
+	}
+	go kinesisConsumer.Start(ctx)
+
+	// sqs consumer
+	sqsConsumer, err := sqs.NewConsumer(cfg.SQS, sensorSvc, gatewaySvc, log)
+	if err != nil {
+		log.Fatal("sqs consumer init failed", zap.Error(err))
+	}
+	go sqsConsumer.Start(ctx)
 
 	// handlers
 	deps := handlers.Dependencies{

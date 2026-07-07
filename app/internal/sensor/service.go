@@ -68,3 +68,11 @@ func (s *Service) GetMappingBySensorEUI(ctx context.Context, sensorEUI string) (
 func (s *Service) GetSensorsByGatewayEUI(ctx context.Context, gatewayEUI string) ([]*Sensor, error) {
 	return s.repo.GetSensorsByGatewayEUI(ctx, gatewayEUI)
 }
+
+func (s *Service) Upsert(ctx context.Context, sensor Sensor) error {
+	return s.repo.UpsertSensor(ctx, sensor)
+}
+
+func (s *Service) Delete(ctx context.Context, eui string) error {
+	return s.repo.DeleteSensorByEui(ctx, eui)
+}

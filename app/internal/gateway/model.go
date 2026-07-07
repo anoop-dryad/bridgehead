@@ -2,18 +2,19 @@ package gateway
 
 import "time"
 
-type Type string
+type Kind string
 
 const (
-	TypeBG Type = "bg"
-	TypeMG Type = "mg"
+	TypeBG Kind = "bg"
+	TypeMG Kind = "mg"
 )
 
 type Gateway struct {
 	ID            string
 	EUI           string
+	GatewayID     string
 	SiteGatewayID int64
-	Kind          string
+	Kind          Kind
 	CreatedAt     time.Time
 }
 

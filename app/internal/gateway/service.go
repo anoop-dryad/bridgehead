@@ -94,3 +94,11 @@ func (s *Service) RecordMeshRegistration(ctx context.Context, bgEUI string, mgSi
 	)
 	return nil
 }
+
+func (s *Service) Delete(ctx context.Context, eui string) error {
+	return s.repo.DeleteGatewayByEui(ctx, eui)
+}
+
+func (s *Service) Upsert(ctx context.Context, gateway Gateway) error {
+	return s.repo.UpsertGateway(ctx, gateway)
+}
