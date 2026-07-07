@@ -1,0 +1,1 @@
+ALTER TABLE gateways ADD COLUMN gateway_id VARCHAR(128) NOT NULL DEFAULT '';
