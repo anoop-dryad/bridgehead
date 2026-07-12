@@ -102,3 +102,7 @@ func (s *Service) Delete(ctx context.Context, eui string) error {
 func (s *Service) Upsert(ctx context.Context, gateway Gateway) error {
 	return s.repo.UpsertGateway(ctx, gateway)
 }
+
+func (s *Service) GetMeshGatewaysByBG(ctx context.Context, gatewayEUI string) ([]*Gateway, error) {
+	return s.repo.GetMeshGatewaysByBG(ctx, gatewayEUI)
+}

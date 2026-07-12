@@ -18,6 +18,7 @@ type RepositoryInterface interface {
 	UpsertMeshMapping(ctx context.Context, mg MeshMapping) error
 	DeleteGatewayByEui(ctx context.Context, eui string) error
 	UpsertGateway(ctx context.Context, g Gateway) error
+	GetMeshGatewaysByBG(ctx context.Context, gatewayEUI string) ([]*Gateway, error)
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
@@ -94,6 +95,19 @@ func (r *Repository) UpsertGateway(ctx context.Context, g Gateway) error {
 	return err
 }
 
+func (r *Repository) GetMeshGatewaysByBG(ctx context.Context, gatewayEUI string) ([]*Gateway, error) {
+	var rows []gatewayRow
+	err := r.db.SelectContext(ctx, &rows, `
+		SELECT g.* FROM gateways g
+		JOIN gateway_mesh_mapping m ON m.bg_eui = g.eui
+		WHERE m.bg_eui = $1
+	`, gatewayEUI)
+	if err != nil {
+		return nil, err
+	}
+	return toGatewayModels(rows), nil
+}
+
 // ── Mappers ───────────────────────────────────────────────────
 
 func toGatewayModel(row gatewayRow) *Gateway {
@@ -105,4 +119,12 @@ func toGatewayModel(row gatewayRow) *Gateway {
 		Kind:          Kind(row.Kind),
 		CreatedAt:     row.CreatedAt,
 	}
+}
+
+func toGatewayModels(rows []gatewayRow) []*Gateway {
+	result := make([]*Gateway, len(rows))
+	for i, r := range rows {
+		result[i] = toGatewayModel(r)
+	}
+	return result
 }
