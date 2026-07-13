@@ -20,6 +20,7 @@ type RepositoryInterface interface {
 	UpdateStatus(ctx context.Context, id string, status Status) error
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, deviceEUI string) ([]*DownlinkRequest, error)
+	ClaimQueuedForTargets(ctx context.Context, targetEUIs []string) ([]*DownlinkRequest, error)
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
@@ -142,6 +143,27 @@ func (r *Repository) List(ctx context.Context, deviceEUI string) ([]*DownlinkReq
         ORDER BY created_at DESC
     `, deviceEUI)
 	if err != nil {
+		return nil, err
+	}
+	return toModels(rows), nil
+}
+
+func (r *Repository) ClaimQueuedForTargets(ctx context.Context, targetEUIs []string) ([]*DownlinkRequest, error) {
+	query, args, err := sqlx.In(`
+		SELECT * FROM downlink_requests
+		WHERE device_eui IN (?)
+		  AND status = 'queued'
+		  AND expires_at > now()
+		ORDER BY created_at ASC
+		FOR UPDATE SKIP LOCKED
+	`, targetEUIs)
+	if err != nil {
+		return nil, err
+	}
+	query = r.db.Rebind(query)
+
+	var rows []downlinkRow
+	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, err
 	}
 	return toModels(rows), nil

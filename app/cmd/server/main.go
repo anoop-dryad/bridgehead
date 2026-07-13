@@ -18,6 +18,8 @@ import (
 	"github.com/anoop-dryad/bridgehead/app/infra/sqs"
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 	"github.com/anoop-dryad/bridgehead/app/internal/gateway"
+	"github.com/anoop-dryad/bridgehead/app/internal/routing"
+	"github.com/anoop-dryad/bridgehead/app/internal/scheduler"
 	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
 	"go.uber.org/zap"
 )
@@ -51,10 +53,14 @@ func main() {
 	sensorRepo := sensor.NewRepository(dbPool)
 	gatewayRepo := gateway.NewRepository(dbPool)
 
-	// services
-	downlinkService := downlink.NewService(downlinkRepo, log) // logging only supported in service layer
+	// services : logging is only supported here
 	sensorSvc := sensor.NewService(sensorRepo, log)
 	gatewaySvc := gateway.NewService(gatewayRepo, redisCache, log)
+	resolver := routing.New(
+		routing.NewSensorAdapter(sensorSvc),
+		routing.NewGatewayAdapter(gatewaySvc),
+	)
+	downlinkSvc := downlink.NewService(downlinkRepo, resolver, log)
 
 	// gateway publisher
 	gatewayPub, err := gatewaymqtt.NewPublisher(cfg.MQTT.Gateway, log)
@@ -70,8 +76,11 @@ func main() {
 	}
 	defer ttnPub.Disconnect()
 
+	// dispatcher
+	dispatcher := scheduler.NewDispatcher(downlinkSvc, sensorSvc, gatewaySvc, gatewayPub, ttnPub, resolver, log)
+
 	// gateway mqtt consumer
-	gatewayConsumer, err := gatewaymqtt.NewConsumer(cfg.MQTT.Gateway, gatewaySvc, log)
+	gatewayConsumer, err := gatewaymqtt.NewConsumer(cfg.MQTT.Gateway, gatewaySvc, dispatcher, log)
 	if err != nil {
 		log.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
 	}
@@ -93,7 +102,7 @@ func main() {
 
 	// handlers
 	deps := handlers.Dependencies{
-		DownlinkHandler: handlers.NewDownlinkHandler(downlinkService),
+		DownlinkHandler: handlers.NewDownlinkHandler(downlinkSvc),
 	}
 
 	srv := server.NewServer(cfg.App, deps, log)

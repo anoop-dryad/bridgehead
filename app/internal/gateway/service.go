@@ -106,3 +106,11 @@ func (s *Service) Upsert(ctx context.Context, gateway Gateway) error {
 func (s *Service) GetMeshGatewaysByBG(ctx context.Context, gatewayEUI string) ([]*Gateway, error) {
 	return s.repo.GetMeshGatewaysByBG(ctx, gatewayEUI)
 }
+
+func (s *Service) GetByEUI(ctx context.Context, gatewayEUI string) (*Gateway, error) {
+	return s.repo.GetByEUI(ctx, gatewayEUI)
+}
+
+func (s *Service) GetBGByMeshEUI(ctx context.Context, mgEUI string) (string, error) {
+	return s.repo.GetBGByMeshEUI(ctx, mgEUI)
+}

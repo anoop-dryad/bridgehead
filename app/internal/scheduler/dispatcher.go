@@ -7,6 +7,7 @@ import (
 
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
 	"github.com/anoop-dryad/bridgehead/app/internal/gateway"
+	"github.com/anoop-dryad/bridgehead/app/internal/routing"
 	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
 )
 
@@ -24,6 +25,7 @@ type Dispatcher struct {
 	gateway    *gateway.Service
 	gatewayPub GatewayPublisher
 	ttnPub     TTNPublisher
+	resolver   *routing.Resolver
 	log        *zap.Logger
 }
 
@@ -33,6 +35,7 @@ func NewDispatcher(
 	gw *gateway.Service,
 	gatewayPub GatewayPublisher,
 	ttnPub TTNPublisher,
+	resolver *routing.Resolver,
 	log *zap.Logger,
 ) *Dispatcher {
 	return &Dispatcher{
@@ -41,6 +44,7 @@ func NewDispatcher(
 		gateway:    gw,
 		gatewayPub: gatewayPub,
 		ttnPub:     ttnPub,
+		resolver:   resolver,
 		log:        log.With(zap.String("component", "dispatcher")),
 	}
 }
@@ -51,7 +55,7 @@ func NewDispatcher(
 // is claimed by exactly one flush.
 func (d *Dispatcher) FlushBG(ctx context.Context, bgEUI string) {
 	// resolve LIVE — which targets currently route through this BG
-	targetEUIs, err := d.resolveTargets(ctx, bgEUI)
+	targetEUIs, err := d.resolver.ResolveTargets(ctx, bgEUI)
 	if err != nil {
 		d.log.Error("failed to resolve targets for bg",
 			zap.String("bg_eui", bgEUI), zap.Error(err))
@@ -73,31 +77,6 @@ func (d *Dispatcher) FlushBG(ctx context.Context, bgEUI string) {
 	for _, req := range requests {
 		d.dispatch(ctx, req, bgEUI)
 	}
-}
-
-// resolveTargets — live lookup: every device currently reachable via this BG
-func (d *Dispatcher) resolveTargets(ctx context.Context, bgEUI string) ([]string, error) {
-	targets := []string{bgEUI} // border: the BG itself is a valid target
-
-	// sensors currently mapped to this BG
-	sensors, err := d.sensor.GetSensorsByGatewayEUI(ctx, bgEUI)
-	if err != nil {
-		return nil, err
-	}
-	for _, s := range sensors {
-		targets = append(targets, s.EUI)
-	}
-
-	// mesh gateways currently mapped under this BG
-	mgs, err := d.gateway.GetMeshGatewaysByBG(ctx, bgEUI)
-	if err != nil {
-		return nil, err
-	}
-	for _, mg := range mgs {
-		targets = append(targets, mg.EUI)
-	}
-
-	return targets, nil
 }
 
 // dispatch — route one downlink to the correct publisher by target kind
