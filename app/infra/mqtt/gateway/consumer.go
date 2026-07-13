@@ -13,13 +13,18 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+type Dispatcher interface {
+	FlushBG(ctx context.Context, bgEUI string)
+}
+
 type Consumer struct {
 	client         mqtt.Client
 	gatewayService *gateway.Service
+	dispatcher     Dispatcher
 	log            *zap.Logger
 }
 
-func NewConsumer(cfg appconfig.GatewayMQTT, svc *gateway.Service, log *zap.Logger) (*Consumer, error) {
+func NewConsumer(cfg appconfig.GatewayMQTT, svc *gateway.Service, dispatcher Dispatcher, log *zap.Logger) (*Consumer, error) {
 	opts := mqtt.NewClientOptions().
 		AddBroker(cfg.BrokerURL).
 		SetClientID(cfg.ClientID).
@@ -39,6 +44,7 @@ func NewConsumer(cfg appconfig.GatewayMQTT, svc *gateway.Service, log *zap.Logge
 	return &Consumer{
 		client:         client,
 		gatewayService: svc,
+		dispatcher:     dispatcher,
 		log:            log.With(zap.String("infra", "mqtt-gateway")),
 	}, nil
 }
@@ -74,11 +80,9 @@ func (c *Consumer) handleMessage(msg mqtt.Message) {
 		c.handleMQTTStatus(info.BGEUI, msg.Payload())
 	case CommandTypeRPL:
 		c.handleRPL(info.BGEUI, msg.Payload())
-	default:
-		c.log.Debug("unhandled command type",
-			zap.String("type", string(info.CommandType)),
-		)
 	}
+
+	c.dispatcher.FlushBG(context.Background(), info.BGEUI)
 }
 
 func (c *Consumer) handleMQTTStatus(bgeui string, data []byte) {

@@ -19,6 +19,8 @@ type RepositoryInterface interface {
 	DeleteGatewayByEui(ctx context.Context, eui string) error
 	UpsertGateway(ctx context.Context, g Gateway) error
 	GetMeshGatewaysByBG(ctx context.Context, gatewayEUI string) ([]*Gateway, error)
+	GetByEUI(ctx context.Context, gatewayEUI string) (*Gateway, error)
+	GetBGByMeshEUI(ctx context.Context, mgEUI string) (string, error)
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
@@ -106,6 +108,34 @@ func (r *Repository) GetMeshGatewaysByBG(ctx context.Context, gatewayEUI string)
 		return nil, err
 	}
 	return toGatewayModels(rows), nil
+}
+
+func (r *Repository) GetByEUI(ctx context.Context, gatewayEUI string) (*Gateway, error) {
+	var row gatewayRow
+	err := r.db.GetContext(ctx, &row, `
+		SELECT * FROM gateways WHERE eui = $1
+	`, gatewayEUI)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return toGatewayModel(row), nil
+}
+
+func (r *Repository) GetBGByMeshEUI(ctx context.Context, mgEUI string) (string, error) {
+	var bgEUI string
+	err := r.db.GetContext(ctx, &bgEUI, `
+		SELECT bg_eui FROM gateway_mesh_mapping WHERE mg_eui = $1
+	`, mgEUI)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrMappingNotFound
+	}
+	return bgEUI, err
 }
 
 // ── Mappers ───────────────────────────────────────────────────

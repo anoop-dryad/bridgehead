@@ -4,18 +4,28 @@ package downlink
 import (
 	"context"
 
+	"github.com/anoop-dryad/bridgehead/app/internal/routing"
 	"go.uber.org/zap"
 )
 
-type Service struct {
-	repo RepositoryInterface
-	log  *zap.Logger
+type GatewayProbe interface {
+	Publish(ctx context.Context, eui, command string, payload []byte) error
 }
 
-func NewService(repo RepositoryInterface, log *zap.Logger) *Service {
+type Service struct {
+	repo     RepositoryInterface
+	probe    GatewayProbe
+	resolver *routing.Resolver
+	log      *zap.Logger
+}
+
+const probeCommand = "liveness"
+
+func NewService(repo RepositoryInterface, resolver *routing.Resolver, log *zap.Logger) *Service {
 	return &Service{
-		repo: repo,
-		log:  log.With(zap.String("domain", "downlink")), // scoped logger
+		repo:     repo,
+		resolver: resolver,
+		log:      log.With(zap.String("domain", "downlink")), // scoped logger
 	}
 }
 
@@ -35,6 +45,18 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (*DownlinkReque
 		)
 		return nil, err
 	}
+
+	// resolve target's BG and probe it once — poke it awake.
+	// online  → BG emits uplink → dispatcher.FlushBG fires
+	// offline → probe lost, harmless
+	bgEUI, err := s.resolver.ResolveBG(ctx, result.DeviceEUI, routing.Kind(req.DeviceType))
+	if err == nil && bgEUI != "" {
+		if perr := s.probe.Publish(ctx, bgEUI, probeCommand, nil); perr != nil {
+			s.log.Debug("probe failed (harmless)",
+				zap.String("bg_eui", bgEUI), zap.Error(perr))
+		}
+	}
+
 	return result, nil
 }
 
@@ -64,6 +86,10 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 
 func (s *Service) List(ctx context.Context, deviceEUI string) ([]*DownlinkRequest, error) {
 	return s.repo.List(ctx, deviceEUI)
+}
+
+func (s *Service) ClaimQueuedForTargets(ctx context.Context, targetEUIs []string) ([]*DownlinkRequest, error) {
+	return s.repo.ClaimQueuedForTargets(ctx, targetEUIs)
 }
 
 func isValidDeviceType(d DeviceType) bool {
