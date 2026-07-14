@@ -21,6 +21,8 @@ type RepositoryInterface interface {
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, deviceEUI string) ([]*DownlinkRequest, error)
 	ClaimQueuedForTargets(ctx context.Context, targetEUIs []string) ([]*DownlinkRequest, error)
+	ExpireStale(ctx context.Context) (int64, error)
+	RequeueWithBackoff(ctx context.Context, id string, nextEligibleAt time.Time) error
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
@@ -49,7 +51,7 @@ func (r *Repository) Create(ctx context.Context, req CreateRequest) (*DownlinkRe
 		DeviceType: string(req.DeviceType),
 		Payload:    req.Payload,
 		Type:       string(req.Type),
-		Status:     string(StatusPending),
+		Status:     string(StatusQueued),
 		ExpiresAt:  time.Now().Add(DefaultTTL),
 	}
 
@@ -167,6 +169,37 @@ func (r *Repository) ClaimQueuedForTargets(ctx context.Context, targetEUIs []str
 		return nil, err
 	}
 	return toModels(rows), nil
+}
+
+func (r *Repository) ExpireStale(ctx context.Context) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE downlink_requests
+		SET status = 'expired', updated_at = now()
+		WHERE status = 'queued'
+		  AND created_at < now() - interval '24 hours'
+	`)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func (r *Repository) RequeueWithBackoff(ctx context.Context, id string, nextEligibleAt time.Time) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE downlink_requests
+		SET status = 'queued',
+		    retry_count = retry_count + 1,
+		    next_eligible_at = $1,
+		    updated_at = now()
+		WHERE id = $2
+	`, nextEligibleAt, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func toModel(row downlinkRow) *DownlinkRequest {

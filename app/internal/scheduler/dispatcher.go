@@ -95,7 +95,7 @@ func (d *Dispatcher) dispatch(ctx context.Context, req *downlink.DownlinkRequest
 		d.log.Error("unknown device type, marking failed",
 			zap.String("id", req.ID),
 			zap.String("device_type", string(req.DeviceType)))
-		d.downlink.MarkFailed(ctx, req.ID)
+		d.downlink.MarkFailedPermanent(ctx, req.ID)
 		return
 	}
 
@@ -105,7 +105,7 @@ func (d *Dispatcher) dispatch(ctx context.Context, req *downlink.DownlinkRequest
 			zap.String("id", req.ID),
 			zap.String("bg_eui", bgEUI),
 			zap.Error(err))
-		d.downlink.Requeue(ctx, req.ID)
+		d.downlink.HandleFailure(ctx, req.ID)
 		return
 	}
 

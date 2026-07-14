@@ -3,6 +3,7 @@ package downlink
 
 import (
 	"context"
+	"time"
 
 	"github.com/anoop-dryad/bridgehead/app/internal/routing"
 	"go.uber.org/zap"
@@ -70,7 +71,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	// only allow delete if not already dispatched
-	if req.Status == StatusDispatched || req.Status == StatusDelivered {
+	if req.Status != StatusDispatched {
 		return ErrInvalidStatus
 	}
 
@@ -90,6 +91,53 @@ func (s *Service) List(ctx context.Context, deviceEUI string) ([]*DownlinkReques
 
 func (s *Service) ClaimQueuedForTargets(ctx context.Context, targetEUIs []string) ([]*DownlinkRequest, error) {
 	return s.repo.ClaimQueuedForTargets(ctx, targetEUIs)
+}
+
+func (s *Service) ExpireStale(ctx context.Context) (int64, error) {
+	return s.repo.ExpireStale(ctx)
+}
+
+// MarkDispatched — publish succeeded.
+func (s *Service) MarkDispatched(ctx context.Context, id string) error {
+	return s.apply(ctx, id, DispatchSuccess)
+}
+
+// HandleFailure — publish failed; machine decides retry-with-backoff vs FAILED.
+func (s *Service) HandleFailure(ctx context.Context, id string) error {
+	return s.apply(ctx, id, DispatchFailed)
+}
+
+func (s *Service) MarkFailedPermanent(ctx context.Context, id string) error {
+	return s.repo.UpdateStatus(ctx, id, StatusFailed)
+}
+
+func (s *Service) apply(ctx context.Context, id string, result DispatchResult) error {
+	req, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// terminal states are immutable — guard against double-processing
+	if IsTerminal(req.Status) {
+		s.log.Debug("ignoring transition on terminal request",
+			zap.String("id", id), zap.String("status", string(req.Status)))
+		return nil
+	}
+
+	d := Decide(req, result, time.Now())
+
+	if !CanTransition(req.Status, d.Next) {
+		s.log.Error("illegal transition blocked",
+			zap.String("id", id),
+			zap.String("from", string(req.Status)),
+			zap.String("to", string(d.Next)))
+		return ErrInvalidStatus
+	}
+
+	if d.IncrementRetry {
+		return s.repo.RequeueWithBackoff(ctx, id, d.NextEligibleAt)
+	}
+	return s.repo.UpdateStatus(ctx, id, d.Next)
 }
 
 func isValidDeviceType(d DeviceType) bool {

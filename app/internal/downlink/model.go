@@ -2,18 +2,8 @@ package downlink
 
 import "time"
 
-type Status string
 type Type string
 type DeviceType string
-
-const (
-	StatusPending    Status = "pending"
-	StatusQueued     Status = "queued"
-	StatusDispatched Status = "dispatched"
-	StatusDelivered  Status = "delivered"
-	StatusFailed     Status = "failed"
-	StatusExpired    Status = "expired"
-)
 
 const (
 	TypeConfig   Type = "config"
@@ -28,7 +18,6 @@ const (
 )
 
 const DefaultTTL = 24 * time.Hour
-const MaxRetries = 5
 
 type DownlinkRequest struct {
 	ID         string

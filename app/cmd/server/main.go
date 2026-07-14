@@ -100,6 +100,10 @@ func main() {
 	}
 	go sqsConsumer.Start(ctx)
 
+	// downlink expiry watcher
+	expiryWatcher := scheduler.NewExpiryWatcher(downlinkSvc, log)
+	go expiryWatcher.Run(ctx)
+
 	// handlers
 	deps := handlers.Dependencies{
 		DownlinkHandler: handlers.NewDownlinkHandler(downlinkSvc),
