@@ -17,14 +17,14 @@ type Server struct {
 	http *http.Server
 }
 
-func NewServer(cfg config.App, deps handlers.Dependencies, log *zap.Logger) *Server {
+func NewServer(httpConfig config.HTTP, appConfig config.App, deps handlers.Dependencies, log *zap.Logger) *Server {
 	engine := gin.New()
 	engine.Use(middleware.Logger(log))
 	engine.Use(gin.Recovery())
-	routes.Register(engine, deps, cfg)
+	routes.Register(engine, deps, appConfig.IsProduction)
 	return &Server{
 		http: &http.Server{
-			Addr:           ":8080",
+			Addr:           httpConfig.Addr,
 			Handler:        engine,
 			ReadTimeout:    10 * time.Second,
 			WriteTimeout:   10 * time.Second,

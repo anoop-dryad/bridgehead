@@ -30,92 +30,119 @@ import (
 // @host            localhost:8080
 func main() {
 	cfg := config.Load()
-
-	log, err := logger.New(cfg.App)
-	if err != nil {
-		panic("failed to init logger: " + err.Error())
-	}
-	defer log.Sync() // flush buffer before exit
+	appLog := newLogger(cfg.App)
+	defer appLog.Sync() // flush buffer before exit
 
 	// context cancelled on OS signal — drives graceful shutdown
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	// ------------------------------- infrastructure ---------------------------------------
+
 	dbPool := db.NewPostgresPool(cfg.DB)
-	redisCache := cache.NewRedisCache(cfg.Redis)
-	if err := redisCache.Ping(ctx); err != nil {
-		log.Fatal("redis unreachable", zap.Error(err))
-	}
+	redisCache := newRedisCache(ctx, cfg.Redis, appLog)
 	defer redisCache.Close()
 
-	// repos
-	downlinkRepo := downlink.NewRepository(dbPool)
-	sensorRepo := sensor.NewRepository(dbPool)
-	gatewayRepo := gateway.NewRepository(dbPool)
+	// ------------------------------- domain ---------------------------------------
 
-	// services : logging is only supported here
-	sensorSvc := sensor.NewService(sensorRepo, log)
-	gatewaySvc := gateway.NewService(gatewayRepo, redisCache, log)
+	sensorSvc := sensor.NewService(sensor.NewRepository(dbPool), appLog)
+	gatewaySvc := gateway.NewService(gateway.NewRepository(dbPool), redisCache, appLog)
 	resolver := routing.New(
 		routing.NewSensorAdapter(sensorSvc),
 		routing.NewGatewayAdapter(gatewaySvc),
 	)
-	downlinkSvc := downlink.NewService(downlinkRepo, resolver, log)
+	downlinkSvc := downlink.NewService(downlink.NewRepository(dbPool), resolver, appLog)
 
-	// gateway publisher
-	gatewayPub, err := gatewaymqtt.NewPublisher(cfg.MQTT.Gateway, log)
-	if err != nil {
-		log.Fatal("gateway publisher init failed", zap.Error(err))
-	}
-	defer gatewayPub.Disconnect()
+	// ------------------------------- publishers ---------------------------------------
 
-	// ttn publisher
-	ttnPub, err := ttn.NewPublisher(cfg.MQTT.TTN, log)
-	if err != nil {
-		log.Fatal("ttn publisher init failed", zap.Error(err))
-	}
-	defer ttnPub.Disconnect()
+	gatewayPublisher := newGatewayMQTTPublisher(cfg.MQTT.Gateway, appLog)
+	defer gatewayPublisher.Disconnect()
+	ttnPublisher := newTTNPublisher(cfg.MQTT.TTN, appLog)
+	defer ttnPublisher.Disconnect()
 
-	// dispatcher
-	dispatcher := scheduler.NewDispatcher(downlinkSvc, sensorSvc, gatewaySvc, gatewayPub, ttnPub, resolver, log)
+	// ------------------------------- dispatcher ---------------------------------------
 
-	// gateway mqtt consumer
-	gatewayConsumer, err := gatewaymqtt.NewConsumer(cfg.MQTT.Gateway, gatewaySvc, dispatcher, log)
-	if err != nil {
-		log.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
-	}
-	go gatewayConsumer.Start(ctx)
+	// TODO : need to revist the dependencies.
+	dispatcher := scheduler.NewDispatcher(downlinkSvc, sensorSvc, gatewaySvc, gatewayPublisher, ttnPublisher, resolver, appLog)
 
-	// kinesis consumer
-	kinesisConsumer, err := kinesis.NewConsumer(cfg.Kinesis, sensorSvc, log)
-	if err != nil {
-		log.Fatal("failed to init kinesis consumer", zap.Error(err))
-	}
-	go kinesisConsumer.Start(ctx)
+	// ------------------------------- background workers ---------------------------------------
 
-	// sqs consumer
-	sqsConsumer, err := sqs.NewConsumer(cfg.SQS, sensorSvc, gatewaySvc, log)
-	if err != nil {
-		log.Fatal("sqs consumer init failed", zap.Error(err))
-	}
-	go sqsConsumer.Start(ctx)
+	go newGatewayMQTTConsumer(cfg.MQTT.Gateway, gatewaySvc, dispatcher, appLog).Start(ctx)
+	go newKinesisConsumer(cfg.Kinesis, sensorSvc, appLog).Start(ctx)
+	go newSqsConsumer(cfg.SQS, sensorSvc, gatewaySvc, appLog).Start(ctx)
+	go scheduler.NewExpiryWatcher(downlinkSvc, appLog).Run(ctx)
 
-	// downlink expiry watcher
-	expiryWatcher := scheduler.NewExpiryWatcher(downlinkSvc, log)
-	go expiryWatcher.Run(ctx)
+	// ------------------------------- http server (blocks) ---------------------------------------
 
-	// handlers
 	deps := handlers.Dependencies{
 		DownlinkHandler: handlers.NewDownlinkHandler(downlinkSvc),
 	}
-
-	srv := server.NewServer(cfg.App, deps, log)
-	log.Info("starting server", zap.String("addr", cfg.HTTP.Addr))
-
+	srv := server.NewServer(cfg.HTTP, cfg.App, deps, appLog)
+	appLog.Info("starting server", zap.String("addr", cfg.HTTP.Addr))
 	if err := srv.Start(ctx); err != nil {
-		log.Fatal("server failed", zap.Error(err))
+		appLog.Fatal("server failed", zap.Error(err))
+	}
+	appLog.Info("server stopped gracefully")
+
+}
+
+// ------------------------------- helper functions ---------------------------------------
+
+func newLogger(appConfig config.App) *zap.Logger {
+	appLog, err := logger.New(appConfig)
+	if err != nil {
+		panic("failed to init logger: " + err.Error())
 	}
 
-	log.Info("server stopped gracefully")
+	return appLog
+}
 
+func newRedisCache(ctx context.Context, redisConfig config.Redis, appLog *zap.Logger) *cache.RedisCache {
+	redisCache := cache.NewRedisCache(redisConfig)
+	if err := redisCache.Ping(ctx); err != nil {
+		appLog.Fatal("redis unreachable", zap.Error(err))
+	}
+
+	return redisCache
+}
+
+func newGatewayMQTTPublisher(mqttConfig config.GatewayMQTT, appLog *zap.Logger) *gatewaymqtt.Publisher {
+	gatewayPub, err := gatewaymqtt.NewPublisher(mqttConfig, appLog)
+	if err != nil {
+		appLog.Fatal("gateway publisher init failed", zap.Error(err))
+	}
+	return gatewayPub
+}
+
+func newTTNPublisher(mqttConfig config.TTNMQTT, appLog *zap.Logger) *ttn.Publisher {
+	ttnPub, err := ttn.NewPublisher(mqttConfig, appLog)
+	if err != nil {
+		appLog.Fatal("ttn publisher init failed", zap.Error(err))
+	}
+	return ttnPub
+}
+
+func newGatewayMQTTConsumer(mqttConfig config.GatewayMQTT, gatewaySvc *gateway.Service, dispatcher *scheduler.Dispatcher, appLog *zap.Logger) *gatewaymqtt.Consumer {
+	gatewayConsumer, err := gatewaymqtt.NewConsumer(mqttConfig, gatewaySvc, dispatcher, appLog)
+	if err != nil {
+		appLog.Fatal("failed to init gateway mqtt consumer", zap.Error(err))
+	}
+	return gatewayConsumer
+}
+
+func newKinesisConsumer(kinesisConfig config.Kinesis, sensorSvc *sensor.Service, appLog *zap.Logger) *kinesis.Consumer {
+	kinesisConsumer, err := kinesis.NewConsumer(kinesisConfig, sensorSvc, appLog)
+	if err != nil {
+		appLog.Fatal("failed to init kinesis consumer", zap.Error(err))
+	}
+	return kinesisConsumer
+}
+
+func newSqsConsumer(sqsConfig config.SQS, sensorSvc *sensor.Service, gatewaySvc *gateway.Service, appLog *zap.Logger) *sqs.Consumer {
+	sqsConsumer, err := sqs.NewConsumer(sqsConfig, sensorSvc, gatewaySvc, appLog)
+	if err != nil {
+		appLog.Fatal("sqs consumer init failed", zap.Error(err))
+	}
+
+	return sqsConsumer
 }
