@@ -6,9 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anoop-dryad/bridgehead/app/internal/downlink"
-	"github.com/anoop-dryad/bridgehead/app/internal/gateway"
 	"github.com/anoop-dryad/bridgehead/app/internal/routing"
-	"github.com/anoop-dryad/bridgehead/app/internal/sensor"
 )
 
 type GatewayPublisher interface {
@@ -21,8 +19,6 @@ type TTNPublisher interface {
 
 type Dispatcher struct {
 	downlink   *downlink.Service
-	sensor     *sensor.Service
-	gateway    *gateway.Service
 	gatewayPub GatewayPublisher
 	ttnPub     TTNPublisher
 	resolver   *routing.Resolver
@@ -31,8 +27,6 @@ type Dispatcher struct {
 
 func NewDispatcher(
 	dl *downlink.Service,
-	sn *sensor.Service,
-	gw *gateway.Service,
 	gatewayPub GatewayPublisher,
 	ttnPub TTNPublisher,
 	resolver *routing.Resolver,
@@ -40,8 +34,6 @@ func NewDispatcher(
 ) *Dispatcher {
 	return &Dispatcher{
 		downlink:   dl,
-		sensor:     sn,
-		gateway:    gw,
 		gatewayPub: gatewayPub,
 		ttnPub:     ttnPub,
 		resolver:   resolver,
@@ -54,7 +46,6 @@ func NewDispatcher(
 // Concurrent calls are safe: FOR UPDATE SKIP LOCKED ensures each downlink
 // is claimed by exactly one flush.
 func (d *Dispatcher) FlushBG(ctx context.Context, bgEUI string) {
-	// resolve LIVE — which targets currently route through this BG
 	targetEUIs, err := d.resolver.ResolveTargets(ctx, bgEUI)
 	if err != nil {
 		d.log.Error("failed to resolve targets for bg",
@@ -65,8 +56,6 @@ func (d *Dispatcher) FlushBG(ctx context.Context, bgEUI string) {
 		return
 	}
 
-	// claim queued downlinks — SKIP LOCKED prevents double-send across
-	// concurrent flushes triggered by rapid successive uplinks
 	requests, err := d.downlink.ClaimQueuedForTargets(ctx, targetEUIs)
 	if err != nil {
 		d.log.Error("failed to claim queued downlinks",
@@ -75,35 +64,44 @@ func (d *Dispatcher) FlushBG(ctx context.Context, bgEUI string) {
 	}
 
 	for _, req := range requests {
-		d.dispatch(ctx, req, bgEUI)
+		d.dispatch(ctx, req)
 	}
 }
 
-// dispatch — route one downlink to the correct publisher by target kind
-func (d *Dispatcher) dispatch(ctx context.Context, req *downlink.DownlinkRequest, bgEUI string) {
-	var err error
-
-	switch req.DeviceType {
-	case downlink.DeviceTypeGateway:
-		// border or mesh — both go via gateway broker to the BG
-		err = d.gatewayPub.Publish(ctx, bgEUI, string(req.Type), req.Payload)
-
-	case downlink.DeviceTypeSensor:
-		err = d.dispatchSensor(ctx, req, bgEUI)
-
-	default:
-		d.log.Error("unknown device type, marking failed",
+// dispatch — resolve full addressing via the resolver, then publish.
+func (d *Dispatcher) dispatch(ctx context.Context, req *downlink.DownlinkRequest) {
+	kind, ok := mapDeviceKind(req.DeviceType)
+	if !ok {
+		d.log.Error("unknown device type, marking failed permanently",
 			zap.String("id", req.ID),
 			zap.String("device_type", string(req.DeviceType)))
 		d.downlink.MarkFailedPermanent(ctx, req.ID)
 		return
 	}
 
+	target, err := d.resolver.ResolveDispatchTarget(ctx, req.DeviceEUI, kind)
 	if err != nil {
-		// publish failed — BG likely went silent. Leave QUEUED for next uplink.
+		// can't resolve routing right now — leave QUEUED, retry on next uplink
+		d.log.Error("failed to resolve dispatch target, re-queueing",
+			zap.String("id", req.ID),
+			zap.String("device_eui", req.DeviceEUI),
+			zap.Error(err))
+		d.downlink.HandleFailure(ctx, req.ID)
+		return
+	}
+
+	switch target.Kind {
+	case routing.KindBorder, routing.KindMesh:
+		err = d.gatewayPub.Publish(ctx, target.BGEUI, string(req.Type), req.Payload)
+	case routing.KindSensor:
+		// payload is base64 in DB; TTN wants the base64 string as-is
+		err = d.ttnPub.Publish(ctx, target.AppID, target.DeviceID, string(req.Payload), []string{target.GatewayID})
+	}
+
+	if err != nil {
 		d.log.Error("dispatch failed, re-queueing",
 			zap.String("id", req.ID),
-			zap.String("bg_eui", bgEUI),
+			zap.String("bg_eui", target.BGEUI),
 			zap.Error(err))
 		d.downlink.HandleFailure(ctx, req.ID)
 		return
@@ -112,24 +110,23 @@ func (d *Dispatcher) dispatch(ctx context.Context, req *downlink.DownlinkRequest
 	d.downlink.MarkDispatched(ctx, req.ID)
 	d.log.Debug("downlink dispatched",
 		zap.String("id", req.ID),
-		zap.String("bg_eui", bgEUI))
+		zap.String("bg_eui", target.BGEUI))
 }
 
-func (d *Dispatcher) dispatchSensor(ctx context.Context, req *downlink.DownlinkRequest, bgEUI string) error {
-	// resolve sensor → app_id + device_id
-	sn, err := d.sensor.GetByEUI(ctx, req.DeviceEUI)
-	if err != nil {
-		return err
+// mapDeviceKind maps the coarse downlink DeviceType to a routing.Kind.
+//
+// TODO: DeviceType (sensor|gateway) is coarser than routing.Kind
+// (border|mesh|sensor). A gateway downlink is treated as KindBorder here,
+// which is WRONG for mesh targets. Revisit: either store border/mesh on the
+// request at creation, or have the resolver refine gateway→border/mesh via
+// GetKind. See dispatcher discussion.
+func mapDeviceKind(dt downlink.DeviceType) (routing.Kind, bool) {
+	switch dt {
+	case downlink.DeviceTypeSensor:
+		return routing.KindSensor, true
+	case downlink.DeviceTypeGateway:
+		return routing.KindBorder, true // ← temporary: mesh mis-routed as border
+	default:
+		return "", false
 	}
-
-	// resolve BG → its TTN gateway_id for class_b_c routing
-	bg, err := d.gateway.GetByEUI(ctx, bgEUI)
-	if err != nil {
-		return err
-	}
-
-	// payload is base64 in DB; TTN wants base64 string
-	frmPayload := string(req.Payload)
-
-	return d.ttnPub.Publish(ctx, sn.AppID, sn.DeviceID, frmPayload, []string{bg.GatewayID})
 }

@@ -76,3 +76,22 @@ func (a *gatewayAdapter) GetBGByMeshEUI(ctx context.Context, mgEUI string) (stri
 	// ← this needs a service method that doesn't exist yet
 	return a.svc.GetBGByMeshEUI(ctx, mgEUI)
 }
+
+func (a *sensorAdapter) GetSensorDetails(ctx context.Context, eui string) (SensorDetails, error) {
+	s, err := a.svc.GetByEUI(ctx, eui)
+	if err != nil {
+		return SensorDetails{}, err
+	}
+	return SensorDetails{
+		AppID:    s.AppID,
+		DeviceID: s.DeviceID,
+	}, nil
+}
+
+func (a *gatewayAdapter) GetGatewayID(ctx context.Context, eui string) (string, error) {
+	g, err := a.svc.GetByEUI(ctx, eui)
+	if err != nil {
+		return "", err
+	}
+	return g.GatewayID, nil
+}

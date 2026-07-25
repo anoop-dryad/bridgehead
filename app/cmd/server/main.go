@@ -63,7 +63,7 @@ func main() {
 	// ------------------------------- dispatcher ---------------------------------------
 
 	// TODO : need to revist the dependencies.
-	dispatcher := scheduler.NewDispatcher(downlinkSvc, sensorSvc, gatewaySvc, gatewayPublisher, ttnPublisher, resolver, appLog)
+	dispatcher := scheduler.NewDispatcher(downlinkSvc, gatewayPublisher, ttnPublisher, resolver, appLog)
 
 	// ------------------------------- background workers ---------------------------------------
 
