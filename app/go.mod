@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	ariga.io/atlas-go-sdk v0.7.2
-	github.com/aws/aws-sdk-go-v2 v1.42.1
+	github.com/aws/aws-sdk-go-v2 v1.43.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.25
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.45.1
 	github.com/eclipse/paho.mqtt.golang v1.5.1
